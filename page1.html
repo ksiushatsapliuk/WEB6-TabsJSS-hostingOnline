@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Створення Tabs</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="icon.png">
+
+</head>
+<body>
+    <input type="checkbox" id="menu-toggle" class="menu-toggle">
+    <label for="menu-toggle" class="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+    </label>
+
+    <div class="grid-container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="page1.html">Створити Tabs</a></li>
+                <li><a href="page2.html">Переглянути Tabs</a></li>
+            </ul>
+        </nav>
+
+        <div class="item2">
+            <img src="kittens.png" alt="Kittens Logo">
+            <h1>Створення Tabs</h1>
+        </div>
+
+        <div class="item3">
+            <h2>Додайте вкладки</h2>
+        </div>
+
+        <div class="item5">
+            <div class="tabs-creator">
+                <h3>Додати нову вкладку</h3>
+                <div class="tab-form">
+                    <input type="text" id="tabTitle" placeholder="Назва вкладки" required>
+                    <textarea id="tabContent" placeholder="Вміст вкладки" required></textarea>
+                    <button class="btn" onclick="addTab()">Додати вкладку</button>
+                </div>
+
+                <div id="message"></div>
+
+                <div class="tabs-preview">
+                    <h3>Попередній перегляд вкладок</h3>
+                    <div id="tabsList"></div>
+                    <button class="btn btn-success" onclick="saveTabs()" style="margin-top: 20px;">
+                        Зберегти всі вкладки
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="item4">
+            <img src="30minscats.webp" alt="Cute cat">
+            <p>Створіть власні вкладки з інформацією про котів!</p>
+        </div>
+
+        <div class="item6">
+            <h1>Love cats!</h1>
+            <img src="me.jpg" alt="Cute cat">
+        </div>
+    </div>
+
+    <script>
+        let tabs = [];
+
+        function addTab() {
+            const title = document.getElementById('tabTitle').value.trim();
+            const content = document.getElementById('tabContent').value.trim();
+            
+            if (!title || !content) {
+                showMessage('Будь ласка, заповніть всі поля!', 'error');
+                return;
+            }
+            
+            tabs.push({
+                id: Date.now(),
+                title: title,
+                content: content
+            });
+            
+            document.getElementById('tabTitle').value = '';
+            document.getElementById('tabContent').value = '';
+            
+            renderTabsList();
+            showMessage('Вкладку додано успішно!', 'success');
+        }
+
+        function deleteTab(id) {
+            tabs = tabs.filter(tab => tab.id !== id);
+            renderTabsList();
+            showMessage('Вкладку видалено!', 'success');
+        }
+
+        function renderTabsList() {
+            const listContainer = document.getElementById('tabsList');
+            
+            if (tabs.length === 0) {
+                listContainer.innerHTML = '<p style="color: #666;">Вкладки ще не додано</p>';
+                return;
+            }
+            
+            listContainer.innerHTML = tabs.map(tab => `
+                <div class="tab-item">
+                    <div class="tab-item-content">
+                        <div class="tab-item-title">${escapeHtml(tab.title)}</div>
+                        <div class="tab-item-text">${escapeHtml(tab.content.substring(0, 100))}...</div>
+                    </div>
+                    <button class="btn-delete" onclick="deleteTab(${tab.id})">Видалити</button>
+                </div>
+            `).join('');
+        }
+
+        async function saveTabs() {
+            if (tabs.length === 0) {
+                showMessage('Додайте хоча б одну вкладку!', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch('save_tabs.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ tabs: tabs })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showMessage('Вкладки успішно збережено на сервері!', 'success');
+                    tabs = [];
+                    renderTabsList();
+                } else {
+                    showMessage('Помилка збереження: ' + result.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Помилка з\'єднання з сервером: ' + error.message, 'error');
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.className = 'message message-' + type;
+            messageDiv.textContent = text;
+            
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Ініціалізація
+        renderTabsList();
+    </script>
+</body>
+</html>

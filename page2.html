@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Перегляд Tabs</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" href="icon.png">
+    
+</head>
+<body>
+    <input type="checkbox" id="menu-toggle" class="menu-toggle">
+    <label for="menu-toggle" class="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+    </label>
+
+    <div class="grid-container">
+        <nav class="navbar">
+            <ul>
+                <li><a href="page1.html">Створити Tabs</a></li>
+                <li><a href="page2.html">Переглянути Tabs</a></li>
+            </ul>
+        </nav>
+
+        <div class="item2">
+            <img src="kittens.png" alt="Kittens Logo">
+            <h1>Перегляд Tabs</h1>
+        </div>
+
+        <div class="item3">
+            <h2>Динамічні вкладки</h2>
+        </div>
+
+        <div class="item5">
+            <div class="tabs-container" id="tabsContainer">
+                <div class="loading">Завантаження даних...</div>
+            </div>
+        </div>
+
+        <div class="item4">
+            <img src="30minscats.webp" alt="Cute cat">
+            <p>Вкладки оновлюються автоматично кожні 3 секунди</p>
+        </div>
+
+        <div class="item6">
+            <h1>Love cats!</h1>
+            <img src="me.jpg" alt="Cute cat">
+        </div>
+    </div>
+
+    <div class="update-indicator" id="updateIndicator">
+        ✓ Дані оновлено!
+    </div>
+
+    <script>
+        let currentTab = 0;
+        let lastTimestamp = 0;
+
+        async function loadTabs() {
+            try {
+                const response = await fetch('get_tabs.php');
+                const data = await response.json();
+                
+                if (data.success && data.tabs && data.tabs.length > 0) {
+                    renderTabs(data.tabs);
+                    lastTimestamp = data.timestamp;
+                } else {
+                    showNoData();
+                }
+            } catch (error) {
+                console.error('Помилка завантаження:', error);
+                showError();
+            }
+        }
+
+        function renderTabs(tabsData) {
+            const container = document.getElementById('tabsContainer');
+            
+            const tabsHeader = document.createElement('div');
+            tabsHeader.className = 'tabs-header';
+            
+            const tabsContent = document.createElement('div');
+            tabsContent.className = 'tabs-content';
+            
+            tabsData.forEach((tab, index) => {
+                // Створення кнопки вкладки
+                const button = document.createElement('button');
+                button.className = 'tab-button' + (index === currentTab ? ' active' : '');
+                button.textContent = tab.title;
+                button.setAttribute('role', 'tab');
+                button.setAttribute('aria-selected', index === currentTab ? 'true' : 'false');
+                button.setAttribute('aria-controls', 'tab-panel-' + index);
+                button.onclick = () => showTab(index);
+                tabsHeader.appendChild(button);
+                
+                // Створення контенту вкладки
+                const pane = document.createElement('div');
+                pane.className = 'tab-pane' + (index === currentTab ? ' active' : '');
+                pane.id = 'tab-panel-' + index;
+                pane.setAttribute('role', 'tabpanel');
+                pane.innerHTML = `<div class="tab-pane-content">${escapeHtml(tab.content)}</div>`;
+                tabsContent.appendChild(pane);
+            });
+            
+            container.innerHTML = '';
+            container.appendChild(tabsHeader);
+            container.appendChild(tabsContent);
+        }
+
+        function showTab(index) {
+            currentTab = index;
+            
+            // Оновлення кнопок
+            document.querySelectorAll('.tab-button').forEach((btn, i) => {
+                btn.classList.toggle('active', i === index);
+                btn.setAttribute('aria-selected', i === index ? 'true' : 'false');
+            });
+            
+            // Оновлення контенту
+            document.querySelectorAll('.tab-pane').forEach((pane, i) => {
+                pane.classList.toggle('active', i === index);
+            });
+        }
+
+        function showNoData() {
+            const container = document.getElementById('tabsContainer');
+            container.innerHTML = `
+                <div class="no-data">
+                    <h3>Дані відсутні</h3>
+                    <p>Створіть вкладки на <a href="page1.html">сторінці створення</a></p>
+                </div>
+            `;
+        }
+
+        function showError() {
+            const container = document.getElementById('tabsContainer');
+            container.innerHTML = `
+                <div class="no-data">
+                    <h3>Помилка завантаження</h3>
+                    <p>Перевірте підключення до сервера</p>
+                </div>
+            `;
+        }
+
+        async function checkForUpdates() {
+            try {
+                const response = await fetch('check_updates.php?last=' + lastTimestamp);
+                const data = await response.json();
+                
+                if (data.updated) {
+                    showUpdateIndicator();
+                    await loadTabs();
+                }
+            } catch (error) {
+                console.error('Помилка перевірки оновлень:', error);
+            }
+            
+            // Наступна перевірка через 3 секунди
+            setTimeout(checkForUpdates, 3000);
+        }
+
+        function showUpdateIndicator() {
+            const indicator = document.getElementById('updateIndicator');
+            indicator.classList.add('show');
+            
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Ініціалізація
+        loadTabs();
+        setTimeout(checkForUpdates, 3000);
+    </script>
+</body>
+</html>
